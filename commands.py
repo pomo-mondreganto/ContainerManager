@@ -1,11 +1,13 @@
-import docker
-import yaml
-import requests
-import os
-import config
-import sqlite3
-import formatters
 import json
+import os
+import sqlite3
+
+import docker
+import requests
+import yaml
+
+import config
+import formatters
 
 
 def get_all_containers():
@@ -167,7 +169,7 @@ def create_container_from_image(service):
         return
 
     print(service)
-    run_kwargs = dict(detach=True)
+    run_kwargs = dict()
     run_kwargs['ports'] = json.loads(service['ports'])
     run_kwargs['cpu_period'] = config.CPU_PERIOD
     run_kwargs['cpu_quota'] = int(float(service['cpu_limit']) * config.CPU_PERIOD)
@@ -175,6 +177,8 @@ def create_container_from_image(service):
     run_kwargs['cap_add'] = json.loads(service['capacities'])
     run_kwargs['name'] = service['name']
     run_kwargs['network'] = config.DOCKER_NETWORK_NAME
+    run_kwargs['remove'] = True
+    run_kwargs['detach'] = True
 
     container = client.containers.run(image=image, **run_kwargs)
 
@@ -231,6 +235,55 @@ def get_all_tasks():
     return results
 
 
+def stop_service(service):
+    client = docker.from_env()
+    container_id = service['container_id']
+    try:
+        container = client.containers.get(container_id)
+    except requests.exceptions.ConnectionError:
+        print('Could not connect to docker daemon')
+        return
+    except docker.errors.NotFound:
+        print(f'No such container: {container_id} during stopping of service {service["name"]}')
+        return
+
+    container.stop()
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cur = conn.cursor()
+    query = "UPDATE Service SET `user_status`=? WHERE id=?"
+    cur.execute(query, ('stopped', service['id']))
+    conn.commit()
+    cur.close()
+
+    print(f'Successfully stopped container for service {service["name"]}')
+
+
+def stop_task(task_name):
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    query = "SELECT id from task WHERE name=?"
+    cur.execute(query, (task_name,))
+    task = cur.fetchone()
+    if not task:
+        print(f'No such task {task_name}')
+        return
+
+    query = "SELECT * FROM Service WHERE task_id=?"
+    cur.execute(query, (task['id'],))
+    services = cur.fetchall()
+    cur.close()
+
+    for service in services:
+        print(f'Stopping service {service["name"]}')
+        stop_service(service)
+
+    print('All services stopped successfully!')
+
+    print('Task stopped')
+
+
 def remove_task(task_name):
     conn = sqlite3.connect(config.DATABASE_PATH)
     conn.row_factory = sqlite3.Row
@@ -243,6 +296,8 @@ def remove_task(task_name):
         print(f'No such task {task_name}')
         return
 
+    stop_task(task_name)
+
     query = "DELETE from Service WHERE task_id=?"
     cur.execute(query, (task['id'],))
     query = "DELETE from Task WHERE id=?"
@@ -252,6 +307,11 @@ def remove_task(task_name):
     conn.commit()
 
     print('Task deleted')
+
+
+def rebuild_task(task_name, verbose=False):
+    remove_task(task_name)
+    add_task(task_name, verbose=verbose)
 
 
 def prune_containers():
