@@ -1,6 +1,5 @@
 import json
 import os
-import sqlite3
 
 import docker
 import requests
@@ -8,6 +7,7 @@ import yaml
 
 import config
 import formatters
+import helpers
 
 
 def get_all_containers():
@@ -57,8 +57,7 @@ def create_image_from_service(client, service, service_name, task_dir, task_name
         for line in output:
             print(line)
 
-    conn = sqlite3.connect(config.DATABASE_PATH)
-    cur = conn.cursor()
+    conn, cur = helpers.get_connection_cursor()
 
     query = ("INSERT INTO Service ("
              "`name`, `user_status`, `image_id`,"
@@ -92,8 +91,7 @@ def create_image_from_service(client, service, service_name, task_dir, task_name
 def add_task(task_name, verbose=False):
     client = docker.from_env()
 
-    conn = sqlite3.connect(config.DATABASE_PATH)
-    cur = conn.cursor()
+    conn, cur = helpers.get_connection_cursor()
 
     query = "SELECT * from Task WHERE name=?"
     cur.execute(query, (task_name,))
@@ -182,8 +180,7 @@ def create_container_from_image(service):
 
     container = client.containers.run(image=image, **run_kwargs)
 
-    conn = sqlite3.connect(config.DATABASE_PATH)
-    cur = conn.cursor()
+    conn, cur = helpers.get_connection_cursor()
     query = "UPDATE Service SET `container_id`=?, `user_status`=? WHERE image_id=?"
     cur.execute(query, (container.id, 'running', image_id))
     cur.close()
@@ -191,9 +188,7 @@ def create_container_from_image(service):
 
 
 def start_task(task_name):
-    conn = sqlite3.connect(config.DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
+    conn, cur = helpers.get_connection_cursor(return_named=True)
 
     query = "SELECT id from task WHERE name=?"
     cur.execute(query, (task_name,))
@@ -215,9 +210,7 @@ def start_task(task_name):
 
 
 def get_all_tasks():
-    conn = sqlite3.connect(config.DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
+    conn, cur = helpers.get_connection_cursor(return_named=True)
 
     query = "SELECT * from Task"
     cur.execute(query)
@@ -248,8 +241,9 @@ def stop_service(service):
         return
 
     container.stop()
-    conn = sqlite3.connect(config.DATABASE_PATH)
-    cur = conn.cursor()
+
+    conn, cur = helpers.get_connection_cursor()
+
     query = "UPDATE Service SET `user_status`=? WHERE id=?"
     cur.execute(query, ('stopped', service['id']))
     conn.commit()
@@ -259,9 +253,7 @@ def stop_service(service):
 
 
 def stop_task(task_name):
-    conn = sqlite3.connect(config.DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
+    conn, cur = helpers.get_connection_cursor(return_named=True)
 
     query = "SELECT id from task WHERE name=?"
     cur.execute(query, (task_name,))
@@ -285,9 +277,7 @@ def stop_task(task_name):
 
 
 def remove_task(task_name):
-    conn = sqlite3.connect(config.DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
+    conn, cur = helpers.get_connection_cursor(return_named=True)
 
     query = "SELECT id from task WHERE name=?"
     cur.execute(query, (task_name,))

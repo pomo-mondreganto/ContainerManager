@@ -13,4 +13,8 @@ docker_events_handler = events_handler.EventHandler(events_obj=events)
 docker_events_handler.start()
 
 p = prompt.Prompt()
-p.cmdloop()
+
+try:
+    p.cmdloop()
+except KeyboardInterrupt:
+    events.close()
