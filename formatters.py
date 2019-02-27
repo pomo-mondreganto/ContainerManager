@@ -24,6 +24,8 @@ def get_image_info(image):
 
 
 def get_service_info(service):
+    if not isinstance(service, dict):
+        service = dict(service)
     return ' '.join(f'{key}:{value}' for key, value in service.items())
 
 

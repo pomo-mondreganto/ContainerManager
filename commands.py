@@ -222,7 +222,7 @@ def get_all_tasks():
         query = "SELECT * from Service WHERE task_id=?"
         cur.execute(query, (task['id'],))
         task_services = cur.fetchall()
-        results.append((dict(task), list(dict(service) for service in task_services)))
+        results.append((task, list(service for service in task_services)))
 
     cur.close()
     return results
@@ -310,3 +310,37 @@ def prune_containers():
         client.containers.prune()
     except requests.exceptions.ConnectionError:
         print('Could not connect to docker daemon')
+
+
+def get_service_status(service):
+    container_id = service['container_id']
+    client = docker.from_env()
+    try:
+        container = client.containers.get(container_id)
+    except requests.exceptions.ConnectionError:
+        print('Could not connect to docker daemon')
+        raise
+    except docker.errors.NotFound:
+        return 'stopped'
+
+    if container.status == 'running':
+        return 'running'
+
+    return 'stopped'
+
+
+def get_task_status(task_name):
+    conn, cur = helpers.get_connection_cursor(return_named=True)
+
+    query = "SELECT id from task WHERE name=?"
+    cur.execute(query, (task_name,))
+    task = cur.fetchone()
+    if not task:
+        print(f'No such task {task_name}')
+        return
+
+    query = "SELECT `name`, `user_status` from Service WHERE task_id=?"
+    cur.execute(query, (task['id'],))
+    results = cur.fetchall()
+    cur.close()
+    return results

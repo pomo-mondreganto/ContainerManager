@@ -1,7 +1,11 @@
 import sqlite3
+
 import docker
 import requests
+
+import commands
 import config
+import helpers
 
 
 def initialize_tasks_table():
@@ -50,6 +54,28 @@ def create_docker_network():
         print('Could not connect to docker daemon')
 
 
+def update_all_tasks():
+    conn, cur = helpers.get_connection_cursor(return_named=True)
+    query = "SELECT * FROM Task"
+    cur.execute(query)
+    tasks = cur.fetchall()
+    for task in tasks:
+        query = "SELECT * FROM Service WHERE task_id=?"
+        cur.execute(query, (task['id'],))
+        services = cur.fetchall()
+        for service in services:
+            try:
+                status = commands.get_service_status(service)
+            except requests.exceptions.ConnectionError:
+                print(f'Could not update status for task {task["name"]}')
+                return
+            query = "UPDATE Service SET `user_status`=? WHERE id=?"
+            cur.execute(query, (status, service['id']))
+            conn.commit()
+    cur.close()
+
+
 def run_all():
     initialize_database()
     create_docker_network()
+    update_all_tasks()

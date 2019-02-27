@@ -2,6 +2,7 @@ from cmd import Cmd
 
 import commands
 import formatters
+import initializers
 
 
 class Prompt(Cmd):
@@ -66,6 +67,19 @@ class Prompt(Cmd):
             containers = commands.get_all_containers()
 
         result = '\n'.join(formatters.get_container_info(container) for container in containers)
+        print(result)
+
+    @staticmethod
+    def do_update_statuses(inp):
+        """Update statuses for all tasks, may take some time"""
+        initializers.update_all_tasks()
+
+    @staticmethod
+    def do_get_task_status(inp):
+        """Get statuses for all services in task"""
+        task_name = inp.split()[0].strip()
+        services = commands.get_task_status(task_name)
+        result = '\n'.join(formatters.get_service_info(service) for service in services)
         print(result)
 
     @staticmethod
