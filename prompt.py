@@ -1,5 +1,7 @@
+import getpass
 from cmd import Cmd
 
+import authentication
 import commands
 import formatters
 import initializers
@@ -8,6 +10,18 @@ import initializers
 class Prompt(Cmd):
     prompt = '(container_manager) '
     intro = 'Welcome to container manager!'
+
+    def cmdloop(self, intro=None):
+        print('Need to authenticate to use prompt!')
+
+        login = input('Enter login: ')
+        password = getpass.getpass('Enter password: ')
+
+        if not authentication.authenticate_user(login, password):
+            print('Invalid credentials')
+            return
+
+        super(Prompt, self).cmdloop(intro=intro)
 
     @staticmethod
     def do_exit(_input):
@@ -35,7 +49,7 @@ class Prompt(Cmd):
 
     @staticmethod
     def do_list_tasks(inp):
-        """List existing tasks"""
+        """List existing tasks, optionally provide 'running'"""
 
         if 'running' in inp:
             result = commands.get_running_tasks()
@@ -100,3 +114,10 @@ class Prompt(Cmd):
         """Get network information"""
         result = formatters.get_network_info(commands.get_network())
         print(result)
+
+    @staticmethod
+    def do_add_user(_inp):
+        """Add user to admins"""
+        login = input('Enter login: ').strip()
+        password = getpass.getpass("Enter password: ").strip()
+        commands.create_user(login=login, password=password)

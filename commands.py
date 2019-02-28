@@ -1,10 +1,12 @@
 import json
 import os
+import re
 
 import docker
 import requests
 import yaml
 
+import authentication
 import config
 import formatters
 import helpers
@@ -364,3 +366,26 @@ def get_task_status(task_name):
     results = cur.fetchall()
     cur.close()
     return results
+
+
+def create_user(login, password):
+    if not re.match(config.LOGIN_REGEX, login):
+        print(f'Login needs to satisfy regex: {config.LOGIN_REGEX}')
+        return
+
+    conn, cur = helpers.get_connection_cursor()
+
+    query = "SELECT id from User WHERE login=?"
+    cur.execute(query, (login,))
+    if cur.fetchone():
+        print('User with that login is already registered')
+        cur.close()
+        return
+
+    password_hash, salt = authentication.get_password_hash(password)
+    query = "INSERT INTO User (`login`, `password_hash`, `salt`) VALUES (?, ?, ?)"
+    cur.execute(query, (login, password_hash, salt))
+    conn.commit()
+    cur.close()
+
+    print(f'User {login} registered successfully!')

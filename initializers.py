@@ -3,9 +3,11 @@ import sqlite3
 import docker
 import requests
 
+import authentication
 import commands
 import config
 import helpers
+import secure_config
 
 
 def initialize_tasks_table():
@@ -17,6 +19,7 @@ def initialize_tasks_table():
         )'''
     cur.execute(query)
     conn.commit()
+    cur.close()
 
 
 def initialize_services_table():
@@ -36,11 +39,46 @@ def initialize_services_table():
         )'''
     cur.execute(query)
     conn.commit()
+    cur.close()
+
+
+def initialize_users_table():
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cur = conn.cursor()
+    query = '''CREATE TABLE IF NOT EXISTS User(
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `login` varchar(255) NOT NULL,
+                `salt` varchar(16) NOT NULL,
+                `password_hash` varchar(255) NOT NULL
+            )'''
+    cur.execute(query)
+    conn.commit()
+    cur.close()
+
+
+def initialize_default_admin():
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cur = conn.cursor()
+
+    query = "SELECT id from User WHERE login=?"
+    cur.execute(query, (secure_config.ADMIN_LOGIN,))
+    if cur.fetchone():
+        cur.close()
+        return
+
+    password_hash, salt = authentication.get_password_hash(secure_config.ADMIN_PASSWORD)
+
+    query = '''INSERT INTO User (`login`, `password_hash`, `salt`) VALUES (?, ?, ?)'''
+    cur.execute(query, (secure_config.ADMIN_LOGIN, password_hash, salt))
+    conn.commit()
+    cur.close()
 
 
 def initialize_database():
     initialize_tasks_table()
     initialize_services_table()
+    initialize_users_table()
+    initialize_default_admin()
 
 
 def create_docker_network():

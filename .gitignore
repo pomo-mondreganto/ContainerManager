@@ -190,3 +190,4 @@ data
 test_tasks
 !test_tasks/.gitkeep
 .idea
+secure_config.py
