@@ -222,7 +222,27 @@ def get_all_tasks():
         query = "SELECT * from Service WHERE task_id=?"
         cur.execute(query, (task['id'],))
         task_services = cur.fetchall()
-        results.append((task, list(service for service in task_services)))
+        results.append((task, task_services))
+
+    cur.close()
+    return results
+
+
+def get_running_tasks():
+    conn, cur = helpers.get_connection_cursor(return_named=True)
+
+    query = "SELECT * from Task"
+    cur.execute(query)
+    tasks = cur.fetchall()
+
+    results = []
+
+    for task in tasks:
+        query = "SELECT * from Service WHERE task_id=? and user_status=?"
+        cur.execute(query, (task['id'], 'running'))
+        task_services = cur.fetchall()
+        if task_services:
+            results.append((task, task_services))
 
     cur.close()
     return results

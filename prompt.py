@@ -6,6 +6,9 @@ import initializers
 
 
 class Prompt(Cmd):
+    prompt = '(container_manager) '
+    intro = 'Welcome to container manager!'
+
     @staticmethod
     def do_exit(_input):
         """Exit prompt"""
@@ -33,7 +36,12 @@ class Prompt(Cmd):
     @staticmethod
     def do_list_tasks(inp):
         """List existing tasks"""
-        result = commands.get_all_tasks()
+
+        if 'running' in inp:
+            result = commands.get_running_tasks()
+        else:
+            result = commands.get_all_tasks()
+
         for task, services in result:
             print(formatters.get_task_info(task, services))
 
