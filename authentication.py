@@ -20,8 +20,8 @@ def authenticate_user(login, password):
 
     query = "SELECT * from User WHERE login=?"
     cur.execute(query, (login,))
-    user = cur.fetchone()
+    user = dict(cur.fetchone() or {})
 
-    if check_password(password=password, password_hash=user['password_hash'], salt=user['salt']):
+    if check_password(password=password, password_hash=user.get('password_hash', ''), salt=user.get('salt', '')):
         return user
     return None

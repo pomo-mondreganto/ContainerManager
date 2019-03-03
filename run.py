@@ -1,3 +1,5 @@
+import sys
+
 import docker
 import requests
 
@@ -17,9 +19,7 @@ if __name__ == '__main__':
         events = main_client.events(decode=True)
     except requests.exceptions.ConnectionError:
         print('Unable to connect to docker')
-        exit(1)
-    finally:
-        events = None
+        sys.exit(1)
 
     docker_events_handler = events_handler.EventHandler(events_obj=events)
     docker_events_handler.start()

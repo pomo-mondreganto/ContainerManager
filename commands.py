@@ -183,8 +183,8 @@ def create_container_from_image(service):
     container = client.containers.run(image=image, **run_kwargs)
 
     conn, cur = helpers.get_connection_cursor()
-    query = "UPDATE Service SET `container_id`=?, `user_status`=? WHERE image_id=?"
-    cur.execute(query, (container.id, 'running', image_id))
+    query = "UPDATE Service SET `container_id`=? WHERE image_id=?"
+    cur.execute(query, (container.id, image_id))
     cur.close()
     conn.commit()
 
@@ -263,13 +263,6 @@ def stop_service(service):
         return
 
     container.stop()
-
-    conn, cur = helpers.get_connection_cursor()
-
-    query = "UPDATE Service SET `user_status`=? WHERE id=?"
-    cur.execute(query, ('stopped', service['id']))
-    conn.commit()
-    cur.close()
 
     print(f'Successfully stopped container for service {service["name"]}')
 

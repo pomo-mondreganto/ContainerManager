@@ -10,8 +10,11 @@ class EventHandler(Thread):
 
     def run(self):
         for event in self.events:
+            print(event)
             if event['Type'] == 'container':
                 if event['status'] == 'die':
                     handler_functions.handle_container_die(event['id'])
+                elif event['status'] == 'start':
+                    handler_functions.handle_container_start(event['id'])
             else:
                 pass
