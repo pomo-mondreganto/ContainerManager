@@ -1,0 +1,2 @@
+database_path: data/db.sqlite3
+tasks_dir: test_tasks
